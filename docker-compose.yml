@@ -1,3 +1,112 @@
+# services:
+#   authservice:
+#     build:
+#       context: ./AuthService
+#       dockerfile: Dockerfile
+#     container_name: mongodb authservice
+#     networks:
+#       - backend
+#     # ports:plus besoin de mettre le port ici (il doit etre annonime)
+
+#     depends_on: # ICI, AuthService est surveille par lui meme
+#       - mongodb-authservice
+#         # en mettant fichier env , evite de mettre les variables d'environnement
+#     env_file:
+#       - ./AuthService/.env
+#     develop: # ICI l'Appli prend en compte à chaq modif et demare tout seul (nodemon)
+#       watch:
+#         - path: ./AuthService/
+#           target: /app/
+#           action: sync
+#         - path: ./AuthService/package.json
+#           action: rebuild
+#       command: nodemon --watch /app --exec "npm start"
+
+#   mongodb-authservice:
+#     image: mongo:latest
+#     container_name: mongodb-authservice
+#     restart: always
+#     ports:
+#       - 27019:27017
+#     volumes:
+#       - mongodb_authservice:/data/db
+#     # environment:
+#     #   MONGODB_INITDB_ROOT_USERNAME: root
+#     #   MONGODB_INITDB_ROOT_PASSWORD: example
+
+#   # ===============PRODUCTSERVICE================================
+
+#   productservice:
+#     build:
+#       context: ./ProductService
+#       dockerfile: Dockerfile
+#     container_name: productservice
+#     networks:
+#       - backend
+#     ports:
+#       - "8082:8082"
+#     depends_on:
+#       - mongodb-productservice
+#     env_file:
+#       - ./ProductService/.env
+#     volumes:
+#       - ./ProductService:/app
+#       - /app/node_modules
+#     develop:
+#       watch:
+#         - path: ./ProductService/
+#           target: /app/
+#           action: sync
+#         - path: ./ProductService/package.json
+#           action: rebuild
+#       command: nodemon --watch /app --exec "npm start"
+
+#   mongodb-productservice:
+#     image: mongo:latest
+#     container_name: mongodb-productservice
+#     restart: always
+#     ports:
+#       - "27018:27017"
+#     volumes:
+#       - mongodb_productservice:/data/db
+#     environment:
+#       MONGODB_INITDB_ROOT_USERNAME: root
+#       MONGODB_INITDB_ROOT_PASSWORD: example
+
+#   # =================APIGATAWAY==============================
+#   apigateway:
+#     build:
+#       context: ./APIGateway
+#       dockerfile: Dockerfile
+#     container_name: apigateway
+#     networks:
+#       - backend
+
+#     ports:
+#       - 3000:3000
+
+#     depends_on: # ICI, c'est APIGateway qui surveille AuthService
+#       - authservice
+#         # en mettant fichier env , evite de mettre les variables d'environnement
+#     env_file:
+#       - ./APIGateway/.env
+#     develop: # ICI l'Appli prend en compte à chaq modif et demare tout seul (nodemon)
+#       watch:
+#         - path: ./APIGateway/
+#           target: /app/
+#           action: sync
+#         - path: ./APIGateway/package.json
+#           action: rebuild
+#       command: nodemon --watch /app --exec "npm start"
+
+# networks:
+#   backend:
+#     driver: bridge
+# volumes:
+#   mongodb_authservice: # ici, image que authservice envoie à apigateway
+#   mongodb_productservice:
+# ===================================================
+
 services:
   authservice:
     build:
@@ -6,14 +115,11 @@ services:
     container_name: authservice
     networks:
       - backend
-    # ports:plus besoin de mettre le port ici (il doit etre annonime)
-
-    depends_on: # ICI, AuthService est surveille par lui meme
+    depends_on:
       - mongodb-authservice
-        # en mettant fichier env , evite de mettre les variables d'environnement
     env_file:
       - ./AuthService/.env
-    develop: # ICI l'Appli prend en compte à chaq modif et demare tout seul (nodemon)
+    develop:
       watch:
         - path: ./AuthService/
           target: /app/
@@ -21,7 +127,9 @@ services:
         - path: ./AuthService/package.json
           action: rebuild
       command: nodemon --watch /app --exec "npm start"
-
+      interval: 10s
+      timeout: 5s
+      retries: 5
   mongodb-authservice:
     image: mongo:latest
     container_name: mongodb-authservice
@@ -30,11 +138,11 @@ services:
       - 27019:27017
     volumes:
       - mongodb_authservice:/data/db
-    # environment:
-    #   MONGODB_INITDB_ROOT_USERNAME: root
-    #   MONGODB_INITDB_ROOT_PASSWORD: example
-
-  # ===============PRODUCTSERVICE================================
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   productservice:
     build:
@@ -44,7 +152,7 @@ services:
     networks:
       - backend
     ports:
-      - "8082:8082"
+      - 8082:8082
     depends_on:
       - mongodb-productservice
     env_file:
@@ -60,6 +168,9 @@ services:
         - path: ./ProductService/package.json
           action: rebuild
       command: nodemon --watch /app --exec "npm start"
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mongodb-productservice:
     image: mongo:latest
@@ -69,11 +180,15 @@ services:
       - "27018:27017"
     volumes:
       - mongodb_productservice:/data/db
-    environment:
-      MONGODB_INITDB_ROOT_USERNAME: root
-      MONGODB_INITDB_ROOT_PASSWORD: example
+    # environment:
+    #   MONGODB_INITDB_ROOT_USERNAME: root
+    #   MONGODB_INITDB_ROOT_PASSWORD: example
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # =================APIGATAWAY==============================
   apigateway:
     build:
       context: ./APIGateway
@@ -81,16 +196,13 @@ services:
     container_name: apigateway
     networks:
       - backend
-
     ports:
       - 3000:3000
-
-    depends_on: # ICI, c'est APIGateway qui surveille AuthService
+    depends_on:
       - authservice
-        # en mettant fichier env , evite de mettre les variables d'environnement
     env_file:
       - ./APIGateway/.env
-    develop: # ICI l'Appli prend en compte à chaq modif et demare tout seul (nodemon)
+    develop:
       watch:
         - path: ./APIGateway/
           target: /app/
@@ -102,6 +214,8 @@ services:
 networks:
   backend:
     driver: bridge
+
 volumes:
-  mongodb_authservice: # ici, image que authservice envoie à apigateway
+  mongodb_authservice:
   mongodb_productservice:
+# docker network create backend   commande pour créer
