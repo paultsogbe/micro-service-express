@@ -113,8 +113,7 @@ services:
       context: ./AuthService
       dockerfile: Dockerfile
     container_name: authservice
-    networks:
-      - backend
+
     depends_on:
       - mongodb-authservice
     env_file:
@@ -126,10 +125,7 @@ services:
           action: sync
         - path: ./AuthService/package.json
           action: rebuild
-      command: nodemon --watch /app --exec "npm start"
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
   mongodb-authservice:
     image: mongo:latest
     container_name: mongodb-authservice
@@ -138,28 +134,20 @@ services:
       - 27019:27017
     volumes:
       - mongodb_authservice:/data/db
-    healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   productservice:
     build:
       context: ./ProductService
       dockerfile: Dockerfile
     container_name: productservice
-    networks:
-      - backend
+
     ports:
       - 8082:8082
     depends_on:
       - mongodb-productservice
     env_file:
       - ./ProductService/.env
-    volumes:
-      - ./ProductService:/app
-      - /app/node_modules
+
     develop:
       watch:
         - path: ./ProductService/
@@ -167,10 +155,6 @@ services:
           action: sync
         - path: ./ProductService/package.json
           action: rebuild
-      command: nodemon --watch /app --exec "npm start"
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   mongodb-productservice:
     image: mongo:latest
@@ -183,19 +167,12 @@ services:
     # environment:
     #   MONGODB_INITDB_ROOT_USERNAME: root
     #   MONGODB_INITDB_ROOT_PASSWORD: example
-    healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   apigateway:
     build:
       context: ./APIGateway
       dockerfile: Dockerfile
     container_name: apigateway
-    networks:
-      - backend
     ports:
       - 3000:3000
     depends_on:
@@ -209,11 +186,6 @@ services:
           action: sync
         - path: ./APIGateway/package.json
           action: rebuild
-      command: nodemon --watch /app --exec "npm start"
-
-networks:
-  backend:
-    driver: bridge
 
 volumes:
   mongodb_authservice:
